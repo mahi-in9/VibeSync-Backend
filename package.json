@@ -1,0 +1,38 @@
+{
+  "name": "vibesync-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+     "start": "concurrently \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:group\" \"npm run start:event\" \"npm run start:poll\"",
+    "start:gateway": "cd api-gateway && npm start",
+    "start:auth": "cd services/auth-service && npm start",
+    "start:group": "cd services/group-service && npm start",
+    "start:event": "cd services/event-service && npm start",
+    "start:poll": "cd services/poll-service && npm start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mahi-in9/VibeSync-Backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mahi-in9/VibeSync-Backend/issues"
+  },
+  "homepage": "https://github.com/mahi-in9/VibeSync-Backend#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.2"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
