@@ -89,4 +89,12 @@ eventSchema.methods.removeRSVP = async function (userId) {
   return this.save();
 };
 
+eventSchema.index({ group: 1, date: 1 });
+
+eventSchema.pre("deleteOne", { document: true }, async function (next) {
+  // Example: remove associated polls
+  await mongoose.model("Poll").deleteMany({ relatedEvent: this._id });
+  next();
+});
+
 export default mongoose.model("Event", eventSchema);

@@ -27,4 +27,14 @@ const messageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+messageSchema.index({ group: 1, createdAt: 1 });
+messageSchema.index({ sender: 1 });
+
+messageSchema.virtual("senderInfo", {
+  ref: "User",
+  localField: "sender",
+  foreignField: "_id",
+  justOne: true,
+});
+
 export default mongoose.model("Message", messageSchema);

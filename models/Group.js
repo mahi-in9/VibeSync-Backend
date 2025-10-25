@@ -73,4 +73,17 @@ groupSchema.pre("save", function (next) {
   next();
 });
 
+groupSchema.index({ owner: 1 });
+groupSchema.index({ name: "text" });
+
+groupSchema.pre("save", function (next) {
+  const ownerInMembers = this.members.some(
+    (m) => m.user.toString() === this.owner.toString()
+  );
+  if (!ownerInMembers) {
+    this.members.push({ user: this.owner, role: "admin" });
+  }
+  next();
+});
+
 export default mongoose.model("Group", groupSchema);
