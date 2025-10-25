@@ -3,12 +3,9 @@ import {
   registerUser,
   loginUser,
   logoutUser,
-  getUserProfile,
-  updateProfile,
-  deleteProfile,
-  requestPasswordReset,
   resetPassword,
-  getProfiles,
+  verifyResetToken,
+  forgotPassword,
 } from "../controllers/authController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
@@ -18,13 +15,8 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", authMiddleware(), logoutUser);
 
-router.get("/me", authMiddleware(), getUserProfile);
-router.put("/me", authMiddleware(), updateProfile);
-router.delete("/me", authMiddleware(), deleteProfile);
-
-router.get("/profiles", authMiddleware(), getProfiles);
-
-router.post("/forgot-password", requestPasswordReset);
+router.post("/forgot-password", forgotPassword);
+router.get("/reset-password/:token", verifyResetToken);
 router.post("/reset-password", resetPassword);
 
 export default router;

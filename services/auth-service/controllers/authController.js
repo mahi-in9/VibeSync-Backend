@@ -95,89 +95,65 @@ export const logoutUser = async (req, res) => {
   res.status(200).json({ message: "Logout successful" });
 };
 
-// user profile
-export const getUserProfile = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id).select("-password");
-    if (!user) return res.status(404).json({ message: "User not found" });
-    res.status(200).json(user);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// update profile
-export const updateProfile = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const { name, email, password, avatar } = req.body;
-    if (name) user.name = name;
-    if (email) user.email = email;
-    if (avatar) user.avatar = avatar;
-    if (password) user.password = await bcrypt.hash(password, 10);
-
-    await user.save();
-
-    res.status(200).json({
-      message: "Profile updated successfully",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar,
-        role: user.role,
-      },
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// delete profile
-export const deleteProfile = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    await Group.updateMany(
-      { members: user._id },
-      { $pull: { members: user._id } }
-    );
-    // await Message.deleteMany({ sender: user._id });
-
-    await user.remove();
-    res.status(200).json({ message: "Profile deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// request reset password
-export const requestPasswordReset = async (req, res) => {
+// forget password
+export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user)
+      return res
+        .status(200)
+        .json({ message: "If that email exists, a reset link has been sent" });
 
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetTokenExpiry = Date.now() + 3600000; // 1 hour
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(rawToken)
+      .digest("hex");
+    const expiry = Date.now() + 60 * 60 * 1000; // 1 hour
 
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpiry = resetTokenExpiry;
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpiry = expiry;
     await user.save();
 
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`;
 
     await sendEmail({
       to: user.email,
       subject: "Password Reset Request",
       html: `<p>Hi ${user.name},</p>
-             <p>You requested a password reset. Click <a href="${resetLink}">here</a> to reset your password. This link is valid for 1 hour.</p>`,
+             <p>You requested to reset your password. Click below to continue:</p>
+             <a href="${resetUrl}">${resetUrl}</a>
+             <p>This link is valid for 1 hour.</p>`,
     });
 
-    res.status(200).json({ message: "Password reset email sent" });
+    res.status(200).json({
+      message: "If that email exists, a password reset link has been sent",
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// verify reset password
+export const verifyResetToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpiry: { $gt: Date.now() },
+    });
+
+    if (!user)
+      return res
+        .status(400)
+        .json({ message: "Invalid or expired reset token" });
+
+    res.status(200).json({ message: "Valid token", email: user.email });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -200,45 +176,6 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     res.status(200).json({ message: "Password updated successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// get all profile
-export const getProfiles = async (req, res) => {
-  try {
-    const currentUserId = req.user._id;
-    const currentUserRole = req.user.role;
-
-    const users = await User.find().select("-password");
-
-    const profiles = await Promise.all(
-      users.map(async (user) => {
-        const totalGroups = await Group.countDocuments({ members: user._id });
-        // const totalMessages = await Message.countDocuments({
-        //   sender: user._id,
-        // });
-
-        return {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          avatar: user.avatar,
-          role: user.role,
-          totalGroups,
-          // totalMessages,
-          canEdit:
-            currentUserId.toString() === user._id.toString() ||
-            currentUserRole === "admin",
-          canDelete:
-            currentUserId.toString() === user._id.toString() ||
-            currentUserRole === "admin",
-        };
-      })
-    );
-
-    res.status(200).json(profiles);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { apiRateLimiter } from "./middleware/rateLimiter.js";
 
 import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import groupRoutes from "./routes/groupRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
 import pollRoutes from "./routes/pollRoutes.js";
@@ -19,6 +20,7 @@ app.use(apiRateLimiter);
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/polls", pollRoutes);
