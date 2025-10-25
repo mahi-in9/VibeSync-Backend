@@ -1,17 +1,19 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 export const sendEmail = async ({ to, subject, text, html }) => {
   try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
+      from: `"VibeSync" <${process.env.SMTP_USER}>`,
       to,
       subject,
       text,
@@ -19,6 +21,6 @@ export const sendEmail = async ({ to, subject, text, html }) => {
     });
     console.log(`✅ Email sent to ${to}`);
   } catch (err) {
-    console.error("❌ Error sending email:", err);
+    console.error("❌ Email sending error:", err.message);
   }
 };
