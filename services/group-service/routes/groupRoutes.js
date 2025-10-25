@@ -6,13 +6,14 @@ import {
   leaveGroup,
   deleteGroup,
 } from "../controllers/groupController.js";
+import authMiddleware from "../../auth-service/middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Public routes
+// public
 router.get("/", getAllGroups);
 
-// Auth-protected routes (API Gateway will handle authentication)
+// auth protected (API Gateway will handle authentication)
 router.post("/", createGroup);
 router.post("/:id/join", joinGroup);
 router.post("/:id/leave", leaveGroup);

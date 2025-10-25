@@ -1,58 +1,68 @@
 import mongoose from "mongoose";
 
-const groupSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    description: {
-      type: String,
-      trim: true,
-    },
-
-    creator: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    members: [
-      {
+const groupSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  description: {
+    type: String,
+    trim: true,
+  },
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  members: [
+    {
+      user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
-    ],
-
-    location: {
-      type: {
+      role: {
         type: String,
-        enum: ["Point"],
-        default: "Point",
+        enum: ["member", "admin"],
+        default: "member",
       },
-      coordinates: {
-        type: [Number],
-        index: "2dsphere",
+      joinedAt: {
+        type: Date,
+        default: Date.now,
       },
     },
-
-    tags: [String], // e.g., ["trekking", "movies", "foodies"]
-
-    events: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Event",
-      },
-    ],
-
-    isPrivate: {
-      type: Boolean,
-      default: false,
+  ],
+  events: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Event",
     },
+  ],
+  privacy: {
+    type: String,
+    enum: ["public", "private", "secret"],
+    default: "public",
   },
-  { timestamps: true }
-);
+  tags: [
+    {
+      type: String,
+      trim: true,
+    },
+  ],
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+// Middleware to update updatedAt on save
+groupSchema.pre("save", function (next) {
+  this.updatedAt = Date.now();
+  next();
+});
 
 export default mongoose.model("Group", groupSchema);

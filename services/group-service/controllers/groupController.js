@@ -1,53 +1,86 @@
 import Group from "../models/Group.js";
 
-/**
- * @desc Create a new group
- * @route POST /api/groups
- */
+// ----create group----
 export const createGroup = async (req, res) => {
   try {
-    const { name, description, creator, tags, location, isPrivate } = req.body;
+    const { name, description, privacy, tags } = req.body;
 
-    const group = await Group.create({
-      name,
-      description,
-      creator,
-      members: [creator],
-      tags,
-      location,
-      isPrivate,
+    if (!name || !name.trim().length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Group name is required" });
+    }
+
+    if (privacy && !["public", "private", "secret"].includes(privacy)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid privacy value" });
+    }
+
+    const newGroup = new Group({
+      name: name.trim(),
+      description: description?.trim(),
+      privacy: privacy || "public",
+      tags: tags || [],
+      owner: req.user._id,
+      members: [{ user: req.user._id, role: "admin" }], // auto-add owner as admin
     });
+
+    await newGroup.save();
 
     res.status(201).json({
       success: true,
       message: "Group created successfully",
-      group,
+      group: newGroup,
     });
   } catch (error) {
+    console.error("Error creating group:", err);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @desc Get all public groups
- * @route GET /api/groups
- */
+// get all groups
 export const getAllGroups = async (req, res) => {
   try {
-    const groups = await Group.find({ isPrivate: false }).populate(
-      "creator",
-      "name email"
-    );
-    res.status(200).json({ success: true, groups });
+    const { page = 1, limit = 10, privacy, search } = req.query;
+
+    let query = {};
+    if (privacy && ["public", "private", "secret"].includes(privacy)) {
+      query.privacy = privacy;
+    }
+
+    // search
+    if (search && search.trim() !== "") {
+      query.$or = [
+        { name: { $regex: search.trim(), $optoins: "i" } },
+        { tags: { $regex: search.trim(), $options: "i" } },
+      ];
+    }
+
+    const total = await Group.countDocuments(query);
+
+    const groups = await Group.find(query)
+      .populate("owner", "name email")
+      .populate("members.user", "name email")
+      .populate("events")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
+    res.status(200).json({
+      success: true,
+      groups,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / limit),
+    });
   } catch (error) {
+    console.error("Error fetching groups:", err);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @desc Join a group
- * @route POST /api/groups/:id/join
- */
+// join group
 export const joinGroup = async (req, res) => {
   try {
     const { id } = req.params; // group id
@@ -60,9 +93,10 @@ export const joinGroup = async (req, res) => {
         .json({ success: false, message: "Group not found" });
 
     if (group.members.includes(userId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "User already in group" });
+      return res.status(400).json({
+        success: false,
+        message: "You are already a member of this group",
+      });
     }
 
     group.members.push(userId);
@@ -72,14 +106,12 @@ export const joinGroup = async (req, res) => {
       .status(200)
       .json({ success: true, message: "Joined group successfully", group });
   } catch (error) {
+    console.error("Error joining group:", err);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @desc Leave a group
- * @route POST /api/groups/:id/leave
- */
+// leave Group
 export const leaveGroup = async (req, res) => {
   try {
     const { id } = req.params;
@@ -102,10 +134,7 @@ export const leaveGroup = async (req, res) => {
   }
 };
 
-/**
- * @desc Delete a group
- * @route DELETE /api/groups/:id
- */
+// delete group
 export const deleteGroup = async (req, res) => {
   try {
     const { id } = req.params;
