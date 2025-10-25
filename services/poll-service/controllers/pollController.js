@@ -1,60 +1,70 @@
 import Poll from "../models/Poll.js";
 
-/**
- * @desc Create a new poll
- * @route POST /api/polls
- */
+// createPoll
 export const createPoll = async (req, res) => {
   try {
-    const { title, description, creator, group, options, expiresAt } = req.body;
+    const { title, description, options, relatedEvent, relatedGroup } =
+      req.body;
 
-    if (!options || options.length < 2)
-      return res
-        .status(400)
-        .json({ success: false, message: "At least 2 options required" });
+    if (!title || !options || !Array.isArray(options) || options.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: "Title and at least 2 options are required.",
+      });
+    }
 
     const poll = await Poll.create({
       title,
       description,
-      creator,
-      group,
-      options: options.map((text) => ({ text })),
-      expiresAt,
+      options: options.map((opt) => ({ text: opt })),
+      createdBy: req.user._id,
+      relatedEvent,
+      relatedGroup,
     });
 
-    res.status(201).json({ success: true, message: "Poll created", poll });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(201).json({ success: true, data: poll });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * @desc Get all active polls for a group
- * @route GET /api/polls/group/:groupId
- */
-export const getGroupPolls = async (req, res) => {
+// getPoll
+export const getAllPolls = async (req, res) => {
   try {
-    const { groupId } = req.params;
-    const polls = await Poll.find({ group: groupId, isActive: true }).populate(
-      "creator",
-      "name email"
-    );
-    res.status(200).json({ success: true, polls });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const polls = await Poll.find()
+      .populate("createdBy", "name email")
+      .populate("relatedEvent", "title date")
+      .populate("relatedGroup", "name");
+    res.status(200).json({ success: true, data: polls });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * @desc Vote on a poll option
- * @route POST /api/polls/:pollId/vote
- */
+// getPoll by id
+export const getPollById = async (req, res) => {
+  try {
+    const poll = await Poll.findById(req.params.id)
+      .populate("createdBy", "name email")
+      .populate("relatedEvent", "title date")
+      .populate("relatedGroup", "name");
+
+    if (!poll)
+      return res
+        .status(404)
+        .json({ success: false, message: "Poll not found" });
+
+    res.status(200).json({ success: true, data: poll });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// vote poll
 export const votePoll = async (req, res) => {
   try {
-    const { pollId } = req.params;
-    const { userId, optionIndex } = req.body;
-
-    const poll = await Poll.findById(pollId);
+    const { optionId } = req.body;
+    const poll = await Poll.findById(req.params.id);
     if (!poll)
       return res
         .status(404)
@@ -64,49 +74,76 @@ export const votePoll = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Poll is closed" });
 
-    // Check if user already voted
-    const alreadyVoted = poll.options.some((opt) => opt.votes.includes(userId));
-    if (alreadyVoted)
-      return res.status(400).json({ success: false, message: "Already voted" });
+    // Remove user from all option votes first (single vote)
+    poll.options.forEach((opt) => {
+      opt.votes = opt.votes.filter(
+        (v) => v.toString() !== req.user._id.toString()
+      );
+    });
 
-    // Record vote
-    if (!poll.options[optionIndex])
+    // Add vote to selected option
+    const option = poll.options.id(optionId);
+    if (!option)
       return res
-        .status(400)
-        .json({ success: false, message: "Invalid option" });
+        .status(404)
+        .json({ success: false, message: "Option not found" });
 
-    poll.options[optionIndex].votes.push(userId);
+    option.votes.push(req.user._id);
     await poll.save();
 
-    res.status(200).json({ success: true, message: "Vote recorded", poll });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res
+      .status(200)
+      .json({ success: true, message: "Vote cast successfully", data: poll });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * @desc Close a poll (only creator)
- * @route PATCH /api/polls/:pollId/close
- */
-export const closePoll = async (req, res) => {
+// delete poll
+export const removeVote = async (req, res) => {
   try {
-    const { pollId } = req.params;
-    const { userId } = req.body;
-
-    const poll = await Poll.findById(pollId);
+    const poll = await Poll.findById(req.params.id);
     if (!poll)
       return res
         .status(404)
         .json({ success: false, message: "Poll not found" });
 
-    if (poll.creator.toString() !== userId)
+    poll.options.forEach((opt) => {
+      opt.votes = opt.votes.filter(
+        (v) => v.toString() !== req.user._id.toString()
+      );
+    });
+
+    await poll.save();
+    res
+      .status(200)
+      .json({ success: true, message: "Vote removed", data: poll });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// close poll
+export const closePoll = async (req, res) => {
+  try {
+    const poll = await Poll.findById(req.params.id);
+    if (!poll)
+      return res
+        .status(404)
+        .json({ success: false, message: "Poll not found" });
+
+    // Only creator can close
+    if (poll.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
 
     poll.isActive = false;
     await poll.save();
 
-    res.status(200).json({ success: true, message: "Poll closed", poll });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res
+      .status(200)
+      .json({ success: true, message: "Poll closed successfully", data: poll });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };

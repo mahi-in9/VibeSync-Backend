@@ -1,6 +1,6 @@
 import express from "express";
 import { serviceProxy } from "../utils/serviceProxy.js";
-import { verifyToken } from "../middleware/verifyToken.js";
+import verifyToken from "../../shared/middleware/verifyToken.js";
 
 const router = express.Router();
 const GROUP_SERVICE_URL = process.env.GROUP_SERVICE_URL;

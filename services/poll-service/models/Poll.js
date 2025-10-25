@@ -1,48 +1,29 @@
 import mongoose from "mongoose";
 
-const pollSchema = new mongoose.Schema(
+const { Schema, model } = mongoose;
+
+// Options
+const optionSchema = new Schema({
+  text: { type: String, required: true },
+  votes: [{ type: Schema.Types.ObjectId, ref: "User" }],
+});
+
+// Poll schema
+const pollSchema = new Schema(
   {
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    description: {
-      type: String,
-      trim: true,
-    },
-
-    creator: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    group: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Group",
-      required: true,
-    },
-
-    options: [
-      {
-        text: { type: String, required: true },
-        votes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-      },
-    ],
-
-    expiresAt: {
-      type: Date,
-      required: true,
-    },
-
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
+    title: { type: String, required: true },
+    description: { type: String },
+    options: [optionSchema],
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    relatedEvent: { type: Schema.Types.ObjectId, ref: "Event" },
+    relatedGroup: { type: Schema.Types.ObjectId, ref: "Group" },
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Poll", pollSchema);
+pollSchema.virtual("totalVotes").get(function () {
+  return this.options.reduce((acc, option) => acc + option.votes.length, 0);
+});
+
+export default model("Poll", pollSchema);

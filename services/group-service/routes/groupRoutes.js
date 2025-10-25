@@ -19,19 +19,19 @@ const router = express.Router();
 router.get("/", getAllGroups);
 router.get("/:id", getGroupById);
 
-// Authenticated routes (user must be logged in)
+// Authenticated routes
 router.use(authMiddleware);
 
 // Group management
-router.post("/", createGroup); // create group
-router.post("/:id/join", joinGroup); // join public group
-router.post("/:id/leave", leaveGroup); // leave group
-router.delete("/:id", deleteGroup); // delete group (owner only)
+router.post("/", createGroup);
+router.post("/:id/join", joinGroup);
+router.post("/:id/leave", leaveGroup);
+router.delete("/:id", deleteGroup);
 
 // Private group join request
 router.post("/:id/request-to-join", requestToJoin);
 
-// Member management (owner only)
+// Member management
 router.post("/:id/promote/:memberId", promoteMember);
 router.post("/:id/demote/:memberId", demoteMember);
 router.post("/:id/transfer-ownership/:newOwnerId", transferOwnership);
