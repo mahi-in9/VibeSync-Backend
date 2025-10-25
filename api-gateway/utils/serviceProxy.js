@@ -1,10 +1,6 @@
 import axios from "axios";
 
-/**
- * Proxy requests to internal microservices
- * @param {string} serviceUrl - Base URL of the microservice
- * @returns {function} Express middleware
- */
+// Proxy requests to internal microservices
 export const serviceProxy = (serviceUrl) => {
   return async (req, res) => {
     try {

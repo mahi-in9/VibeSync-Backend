@@ -6,10 +6,10 @@ const router = express.Router();
 const POLL_SERVICE_URL = process.env.POLL_SERVICE_URL;
 
 // Public GET routes
-router.get("/:path(*)", serviceProxy(POLL_SERVICE_URL));
+router.get("/", serviceProxy(POLL_SERVICE_URL));
 
 // Protected routes (POST, PATCH, DELETE)
 router.use(verifyToken);
-router.all("/:path(*)", serviceProxy(POLL_SERVICE_URL));
+router.all("/", serviceProxy(POLL_SERVICE_URL));
 
 export default router;

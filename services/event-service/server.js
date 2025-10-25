@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import connectDB from "../../shared/config/db.js";
 import eventRoutes from "./routes/eventRoutes.js";
 
 dotenv.config();
@@ -21,10 +22,7 @@ app.get("/", (req, res) => {
 });
 
 // Database connection
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected for Event Service"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+await connectDB;
 
 // Start server
 const PORT = process.env.PORT || 5003;

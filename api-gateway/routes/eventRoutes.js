@@ -6,10 +6,10 @@ const router = express.Router();
 const EVENT_SERVICE_URL = process.env.EVENT_SERVICE_URL;
 
 // Public GET routes
-router.get("/:path(*)", serviceProxy(EVENT_SERVICE_URL));
+router.get("/", serviceProxy(EVENT_SERVICE_URL));
 
 // Protected routes (POST, PATCH, DELETE)
 router.use(verifyToken);
-router.all("/:path(*)", serviceProxy(EVENT_SERVICE_URL));
+router.all("/", serviceProxy(EVENT_SERVICE_URL));
 
 export default router;
