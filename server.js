@@ -84,7 +84,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/polls", pollRoutes);
-app.use("/messages", messageRoutes);
+app.use("/api/messages", messageRoutes);
 
 // Health check
 app.get("/", (req, res) => {
