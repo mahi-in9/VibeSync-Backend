@@ -50,22 +50,87 @@ io.on("connection", (socket) => {
     socket.leave(groupId);
     console.log(`Socket ${socket.id} left group ${groupId}`);
   });
-
   socket.on("sendMessage", async (data) => {
     try {
-      // Send message to your backend
-      const axiosResponse = await axios.post(
-        `${process.env.BACKEND_URL || "http://localhost:5000"}/api/messages`,
+      // Save message in DB
+      const res = await axios.post(
+        `${process.env.BACKEND_URL}/api/messages`,
         data,
         { headers: { Authorization: data.token } }
       );
 
-      const message = axiosResponse.data.message;
+      const message = res.data.message;
 
-      // Broadcast message to group
+      // Broadcast to only the group room
       io.to(data.groupId).emit("newMessage", message);
     } catch (err) {
-      console.error("Error sending message:", err.message);
+      console.error("Send message error:", err.message);
+    }
+  });
+
+  // --- Real-time Poll Events ---
+  socket.on("votePoll", async ({ pollId, optionId, token }) => {
+    try {
+      const res = await axios.post(
+        `${process.env.BACKEND_URL}/api/polls/${pollId}/vote`,
+        { optionId },
+        { headers: { Authorization: token } }
+      );
+      // Broadcast updated poll to all connected clients
+      io.emit("pollUpdated", res.data.data);
+    } catch (err) {
+      console.error("Vote poll error:", err.message);
+    }
+  });
+
+  socket.on("removeVote", async ({ pollId, token }) => {
+    try {
+      const res = await axios.delete(
+        `${process.env.BACKEND_URL}/api/polls/${pollId}/vote`,
+        { headers: { Authorization: token } }
+      );
+      io.emit("pollUpdated", res.data.data);
+    } catch (err) {
+      console.error("Remove vote error:", err.message);
+    }
+  });
+
+  socket.on("closePoll", async ({ pollId, token }) => {
+    try {
+      const res = await axios.patch(
+        `${process.env.BACKEND_URL}/api/polls/${pollId}/close`,
+        {},
+        { headers: { Authorization: token } }
+      );
+      io.emit("pollUpdated", res.data.data);
+    } catch (err) {
+      console.error("Close poll error:", err.message);
+    }
+  });
+
+  // --- Real-time RSVP Events ---
+  socket.on("updateRSVP", async ({ eventId, status, token }) => {
+    try {
+      const res = await axios.post(
+        `${process.env.BACKEND_URL}/api/events/${eventId}/rsvp`,
+        { status },
+        { headers: { Authorization: token } }
+      );
+      io.emit("rsvpUpdated", { eventId, rsvp: res.data.event.rsvp });
+    } catch (err) {
+      console.error("RSVP update error:", err.message);
+    }
+  });
+
+  socket.on("removeRSVP", async ({ eventId, token }) => {
+    try {
+      const res = await axios.delete(
+        `${process.env.BACKEND_URL}/api/events/${eventId}/rsvp`,
+        { headers: { Authorization: token } }
+      );
+      io.emit("rsvpUpdated", { eventId, rsvp: res.data.event.rsvp });
+    } catch (err) {
+      console.error("RSVP remove error:", err.message);
     }
   });
 
