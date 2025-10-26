@@ -21,38 +21,35 @@ export const getUserProfile = async (req, res) => {
 };
 
 // --- Update Profile ---
+// --- Update Profile ---
 export const updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    if (!user)
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    const { name, email, password, avatar, latitude, longitude, address } =
-      req.body;
+    const { name, email, password } = req.body;
+
+    // Update avatar if file uploaded
+    if (req.file) {
+      user.avatar = `/uploads/${req.file.filename}`; // save file path
+    }
 
     if (name) user.name = name;
 
-    // ✅ Validate email uniqueness
     if (email && email !== user.email) {
       const existingEmail = await User.findOne({ email });
-      if (existingEmail)
-        return res
-          .status(400)
-          .json({ success: false, message: "Email already in use" });
+      if (existingEmail) return res.status(400).json({ success: false, message: "Email already in use" });
       user.email = email;
     }
 
-    if (avatar) user.avatar = avatar;
-
     if (password) user.password = await bcrypt.hash(password, 10);
 
-    // ✅ Update GeoJSON location safely
+    // Update location if provided
+    const { latitude, longitude, address } = req.body;
     if (latitude && longitude) {
       user.location = {
         type: "Point",
-        coordinates: [Number(longitude), Number(latitude)], // GeoJSON order
+        coordinates: [Number(longitude), Number(latitude)],
         address: address || user.location?.address || "",
       };
     }
@@ -75,6 +72,7 @@ export const updateProfile = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 // --- Delete Profile ---
 export const deleteProfile = async (req, res) => {
